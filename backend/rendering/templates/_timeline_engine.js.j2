@@ -128,8 +128,8 @@
                 bullet.classList.add('b-visible');
                 if (G) {
                     G.fromTo(bullet, 
-                        { x: -30, opacity: 0 },
-                        { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }
+                        { x: -10 },
+                        { x: 0, duration: 0.5, ease: 'power3.out' }
                     );
                     const spans = bullet.querySelectorAll('.word-span');
                     if (spans.length > 0) {
@@ -186,31 +186,25 @@
             }
         }
 
-        /* ── diagram_enter: Slide in the floating diagram card ── */
-        if (t === 'diagram_enter') {
-            const diagCard = $('diagram-card');
-            if (diagCard) {
-                diagCard.classList.add('diag-visible');
-                if (G) {
-                    G.fromTo(diagCard,
-                        { opacity: 0, x: 40, scale: 0.95 },
-                        { opacity: 1, x: 0, scale: 1, duration: 0.8, ease: 'back.out(1.2)' }
-                    );
-                }
-            }
-        }
+        /* ── diagram_enter & diagram_zoom_in: handled by UPGRADE 2 block below ── */
 
-        /* ── Diagram Intelligence Upgrade ─────────────────────── */
-        if (t === 'diagram_zoom_in') {
+        /* ── Diagram Intelligence Upgrade (AnimationBrain event types) ── */
+
+        if (t === 'process_flow_pan') {
             if (d && d.region) {
-                if (typeof zoomToRegion === 'function') zoomToRegion(d.region, d.zoom_scale || 2.2, 0.9);
+                if (typeof zoomToRegion === 'function') zoomToRegion(d.region, d.zoom_scale || 1.8, 1.2);
                 if (typeof moveCursor === 'function') moveCursor(d.region);
             }
         }
 
-        if (t === 'diagram_zoom_out') {
-            if (typeof zoomOut === 'function') zoomOut(0.85);
+        if (t === 'sequential_zoom_per_region') {
+            if (d && d.region) {
+                if (typeof zoomToRegion === 'function') zoomToRegion(d.region, d.zoom_scale || 2.4, 0.8);
+                if (typeof moveCursor === 'function') moveCursor(d.region);
+            }
         }
+
+        /* ── diagram_zoom_out: handled by UPGRADE 2 block below ── */
 
         if (t === 'diagram_annotate_circle') {
             if (d && d.region) {
@@ -230,11 +224,13 @@
             }
         }
 
-        if (t === 'diagram_cursor_move') {
-            if (d && d.region) {
-                if (typeof moveCursor === 'function') moveCursor(d.region);
+        if (t === 'dramatic_arrow') {
+            if (d && d.from_region && d.to_region) {
+                if (typeof drawFlowArrow === 'function') drawFlowArrow(d.from_region, d.to_region, d.label || 'causes', '#FF4444');
             }
         }
+
+        /* ── diagram_cursor_move: handled by UPGRADE B block below ── */
 
         if (t === 'diagram_overview') {
             let curDot = document.getElementById('cursor-dot');
@@ -333,28 +329,36 @@
 
         /* ── cause_highlight: DNA-3 Highlight left side ── */
         if (t === 'cause_highlight') {
-            const cause = $('cause-panel-target');
-            if (cause) {
-                cause.classList.add('active');
-                if (G) {
-                    G.fromTo(cause, 
-                        { boxShadow: '0 0 10px rgba(255, 59, 59, 0.2)' },
-                        { boxShadow: '0 0 45px rgba(255, 59, 59, 0.65)', duration: 0.6, yoyo: true, repeat: 1, ease: 'sine.inOut' }
-                    );
+            if (d && d.region && typeof drawHighlightBox === 'function') {
+                drawHighlightBox(d.region, d.annotation_color || '#FF4444');
+            } else {
+                const cause = $('cause-panel-target');
+                if (cause) {
+                    cause.classList.add('active');
+                    if (G) {
+                        G.fromTo(cause, 
+                            { boxShadow: '0 0 10px rgba(255, 59, 59, 0.2)' },
+                            { boxShadow: '0 0 45px rgba(255, 59, 59, 0.65)', duration: 0.6, yoyo: true, repeat: 1, ease: 'sine.inOut' }
+                        );
+                    }
                 }
             }
         }
 
-        /* ── effect_highlight: DNA-3 Highlight right side ── */
-        if (t === 'effect_highlight') {
-            const effect = $('effect-panel-target');
-            if (effect) {
-                effect.classList.add('active');
-                if (G) {
-                    G.fromTo(effect, 
-                        { boxShadow: '0 0 10px rgba(16, 185, 129, 0.2)' },
-                        { boxShadow: '0 0 45px rgba(16, 185, 129, 0.65)', duration: 0.6, yoyo: true, repeat: 1, ease: 'sine.inOut' }
-                    );
+        /* ── effect_highlight / effect_reveal: DNA-3 Highlight right side ── */
+        if (t === 'effect_highlight' || t === 'effect_reveal') {
+            if (d && d.region && typeof drawHighlightBox === 'function') {
+                drawHighlightBox(d.region, d.annotation_color || '#44FF88');
+            } else {
+                const effect = $('effect-panel-target');
+                if (effect) {
+                    effect.classList.add('active');
+                    if (G) {
+                        G.fromTo(effect, 
+                            { boxShadow: '0 0 10px rgba(16, 185, 129, 0.2)' },
+                            { boxShadow: '0 0 45px rgba(16, 185, 129, 0.65)', duration: 0.6, yoyo: true, repeat: 1, ease: 'sine.inOut' }
+                        );
+                    }
                 }
             }
         }
@@ -708,7 +712,7 @@
             const el = $('bullet_' + idx) || q(`.bullet[data-index="${idx}"]`);
             if (el) {
                 if (G) {
-                    G.fromTo(el, {x:-30, opacity:0}, {x:0, opacity:0.75, duration:0.4, ease:'power3.out'});
+                    G.fromTo(el, {x:-10}, {x:0, duration:0.4, ease:'power3.out'});
                     el.classList.add('b-visible');
                 } else {
                     el.classList.add('b-visible');

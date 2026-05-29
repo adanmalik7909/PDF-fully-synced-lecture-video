@@ -13,15 +13,16 @@ from app.utils.logger import log_info, log_error
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 
 # Map of the 8 Scene DNA archetypes to Jinja2 template files
+# The user specifically requested restoring the unified blue/white layout (concept.html.j2) for all scenes.
 DNA_TEMPLATE_MAP = {
-    "DNA-1 CONCEPT_DEFINITION": "concept_definition_scene.html.j2",
-    "DNA-2 PROCESS_FLOW": "process_flow_scene.html.j2",
-    "DNA-3 CAUSE_EFFECT": "cause_effect_scene.html.j2",
-    "DNA-4 COMPARISON": "comparison_scene.html.j2",
-    "DNA-5 DIAGRAM_SPATIAL": "diagram_spatial_scene.html.j2",
-    "DNA-6 WORKED_EXAMPLE": "worked_example_scene.html.j2",
-    "DNA-7 ANALOGY_BRIDGE": "analogy_bridge_scene.html.j2",
-    "DNA-8 TAKEAWAY_SUMMARY": "takeaway_summary_scene.html.j2"
+    "DNA-1 CONCEPT_DEFINITION": "concept.html.j2",
+    "DNA-2 PROCESS_FLOW": "concept.html.j2",
+    "DNA-3 CAUSE_EFFECT": "concept.html.j2",
+    "DNA-4 COMPARISON": "concept.html.j2",
+    "DNA-5 DIAGRAM_SPATIAL": "concept.html.j2",
+    "DNA-6 WORKED_EXAMPLE": "concept.html.j2",
+    "DNA-7 ANALOGY_BRIDGE": "concept.html.j2",
+    "DNA-8 TAKEAWAY_SUMMARY": "concept.html.j2"
 }
 
 # Avatar configuration parameters per layout

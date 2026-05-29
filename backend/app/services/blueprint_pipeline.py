@@ -109,12 +109,13 @@ class BlueprintPipeline:
         scene_data["total_scenes"] = total_scenes
         scene_data["duration_sec"] = total_duration_ms / 1000.0
 
-        # -- Resolve diagrams → base64 --
+        # -- Resolve diagrams → base64 and keep track of valid disk paths --
         refs = scene_data.get("diagram_refs", [])
         if not refs and scene_data.get("diagram_ref"):
             refs = [scene_data["diagram_ref"]]
 
         resolved_diagrams = []
+        resolved_refs = []
         for ref in refs:
             candidates = [
                 ref,                                                        # exact path from LLM/injection
@@ -126,12 +127,14 @@ class BlueprintPipeline:
                 b64 = _encode_image_b64(c)
                 if b64:
                     resolved_diagrams.append(b64)
+                    resolved_refs.append(c)
                     _safe_print(f"    [Diagram] Resolved: {c}")
                     break
             else:
                 _safe_print(f"    [Diagram] WARNING: Could not resolve: {ref}")
 
         scene_data["diagram_paths"] = resolved_diagrams
+        scene_data["diagram_refs"] = resolved_refs
         if resolved_diagrams:
             scene_data["diagram_path"] = resolved_diagrams[0]
             _safe_print(f"    [Diagram] {len(resolved_diagrams)} diagram(s) loaded for scene {scene_id}")
@@ -178,7 +181,7 @@ class BlueprintPipeline:
         scene_data["avatar_config"] = {
             "visible": True,
             "is_lipsync": is_lipsync,
-            "hidden_for_ffmpeg": is_lipsync  # Only hide HTML avatar when lipsync video exists to overlay
+            "hidden_for_ffmpeg": True  # Always hide HTML avatar; FFmpeg handles both lipsync and static overlay
         }
 
         scene_data["_audio_path"] = audio_path  # for TimelineBuilder
@@ -187,34 +190,8 @@ class BlueprintPipeline:
         builder = TimelineBuilder(scene=scene_data, words=words, total_ms=total_duration_ms)
         timeline_data = builder.build()
 
-        # -- Animation Brain: Intelligent animation sequencing --
-        try:
-            from core.animation_brain import AnimationBrain
-            brain = AnimationBrain()
-            narration = scene_data.get('narration', '')
-            diagram_img = None
-            # Find actual diagram image path (not base64)
-            for ref in refs:
-                candidates = [ref, os.path.join('static/uploads/diagrams', os.path.basename(str(ref)))]
-                for c in candidates:
-                    if os.path.exists(c) and not str(c).startswith('data:'):
-                        diagram_img = c
-                        break
-                if diagram_img:
-                    break
-
-            brain_events = brain.generate_animation_events(
-                scene=scene_data,
-                narration_text=narration,
-                word_timestamps=words,
-                diagram_image_path=diagram_img
-            )
-            if brain_events:
-                timeline_data['events'].extend(brain_events)
-                timeline_data['events'].sort(key=lambda e: e['start_ms'])
-                _safe_print(f'    [AnimationBrain] {len(brain_events)} intelligent events added')
-        except Exception as e:
-            _safe_print(f'    [AnimationBrain] Skipped (non-fatal): {e}')
+        # NOTE: Animation Brain events are already injected inside TimelineBuilder.build()
+        # via the generate_animation_script() function call. No duplicate call needed here.
 
         # -- Render HTML (with TIMELINE_DATA injected) --
         router = SceneRouter()

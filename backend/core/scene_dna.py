@@ -11,8 +11,12 @@ import json
 import google.generativeai as genai
 from app.utils.logger import log_info, log_error, log_debug
 
-# Configure Gemini
-api_key = os.getenv("GEMINI_API_KEY")
+# Configure Gemini — load from pydantic-settings (.env) with os.getenv fallback
+try:
+    from app.config import settings as _app_settings
+    api_key = getattr(_app_settings, "GEMINI_API_KEY", "") or os.getenv("GEMINI_API_KEY", "")
+except ImportError:
+    api_key = os.getenv("GEMINI_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
 

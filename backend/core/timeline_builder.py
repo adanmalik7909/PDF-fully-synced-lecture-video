@@ -68,11 +68,25 @@ class TimelineBuilder:
         if self.scene.get("diagram_refs") and len(self.scene["diagram_refs"]) > 0:
             from core.animation_brain import generate_animation_script
             primary_diagram_path = self.scene["diagram_refs"][0]
-            if os.path.exists(primary_diagram_path):
+            
+            # Make sure we find the existing file path
+            actual_path = None
+            candidates = [
+                primary_diagram_path,
+                os.path.join("backend", primary_diagram_path) if not primary_diagram_path.startswith("backend") else primary_diagram_path,
+                os.path.join("static/uploads/diagrams", os.path.basename(str(primary_diagram_path))),
+                os.path.join("backend/static/uploads/diagrams", os.path.basename(str(primary_diagram_path))),
+            ]
+            for cand in candidates:
+                if cand and os.path.exists(cand):
+                    actual_path = cand
+                    break
+                    
+            if actual_path:
                 brain_events = generate_animation_script(
                     scene=self.scene,
                     word_timestamps=self.words,
-                    diagram_image_path=primary_diagram_path
+                    diagram_image_path=actual_path
                 )
                 events.extend(brain_events)
         # ─────────────────────────────────────────────────────────────
@@ -199,7 +213,12 @@ class TimelineBuilder:
 
         try:
             from groq import Groq
-            api_key = os.environ.get("GROQ_API_KEY", "")
+            # Read from app settings (pydantic-settings loads .env) with os.environ fallback
+            try:
+                from app.config import settings as app_settings
+                api_key = getattr(app_settings, "GROQ_API_KEY", "") or os.environ.get("GROQ_API_KEY", "")
+            except ImportError:
+                api_key = os.environ.get("GROQ_API_KEY", "")
             if not api_key:
                 print("[CursorGrounding] No GROQ_API_KEY set — skipping cursor events")
                 return cursor_events
@@ -241,13 +260,20 @@ Diagram Elements:
             generated_events = json.loads(text.strip())
 
             for ev in generated_events:
+                tx = ev.get("target_x", 0.5)
+                ty = ev.get("target_y", 0.5)
+                region = {
+                    "x_pct": tx - 0.05,
+                    "y_pct": ty - 0.05,
+                    "w_pct": 0.1,
+                    "h_pct": 0.1
+                }
                 cursor_events.append({
                     "start_ms": ev.get("timestamp_ms", 0),
                     "end_ms": ev.get("timestamp_ms", 0) + 600,
-                    "event_type": "cursor_move",
-                    "details": {
-                        "target_x": ev.get("target_x"),
-                        "target_y": ev.get("target_y"),
+                    "event_type": "diagram_cursor_move",
+                    "data": {
+                        "region": region,
                         "label": ev.get("label", ""),
                         "element_id": ev.get("element_id", "")
                     }
@@ -538,12 +564,19 @@ Diagram Elements:
         """Find the exact occurrence of trigger in self.words. Case-insensitive."""
         if not trigger or not self.words:
             return None
-        normalized = self._normalize(trigger)
-        first_word = normalized.split()[0] if normalized.split() else normalized
+            
+        # Split trigger phrase by space before stripping non-word characters
+        trigger_words = trigger.split()
+        if not trigger_words:
+            return None
+            
+        first_word = re.sub(r"[^\w]", "", trigger_words[0]).lower()
+        if not first_word:
+            return None
         
         matches = []
         for i, w in enumerate(self.words):
-            if first_word in self._normalize(w["word"]):
+            if first_word in re.sub(r"[^\w]", "", w["word"]).lower():
                 matches.append((i, w["start_ms"]))
                 
         if not matches:
@@ -963,6 +996,9 @@ Diagram Elements:
                 "formula_render", "annotation_circle", "flow_arrow_draw", "arrow_draw",
                 "dramatic_pause", "diagram_overview", "heading_focus", "takeaway_show",
                 "analogy_overlay", "diagram_enter", "diagram_exit",
+                # V14: New AnimationBrain DNA-specific events
+                "process_flow_pan", "sequential_zoom_per_region",
+                "dramatic_arrow", "effect_reveal",
             }
             if etype in _DNA_PASSTHROUGH:
                 refined_events.append(e)
@@ -1005,7 +1041,7 @@ Diagram Elements:
         # --- RULE 2: Signaling (300ms quiet window preceding new bullet/zooms) ---
         for i in range(len(refined_events)):
             curr = refined_events[i]
-            if curr.get("event_type") in ("bullet_enter", "bullet_word_reveal", "diagram_pan_zoom", "diagram_zoom_in"):
+            if curr.get("event_type") in ("bullet_enter", "bullet_word_reveal", "diagram_pan_zoom", "diagram_zoom_in", "process_flow_pan", "sequential_zoom_per_region"):
                 target_start = curr["start_ms"]
                 # Look backwards for preceding animations in [target_start - 300, target_start]
                 for prev in refined_events[:i]:

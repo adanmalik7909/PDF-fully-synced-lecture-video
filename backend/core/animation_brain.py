@@ -4,7 +4,17 @@ import base64
 import string
 import google.generativeai as genai
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# Lazy-load API key from pydantic-settings (loads .env) with os.getenv fallback
+def _get_gemini_key():
+    try:
+        from app.config import settings as app_settings
+        return getattr(app_settings, "GEMINI_API_KEY", "") or os.getenv("GEMINI_API_KEY", "")
+    except ImportError:
+        return os.getenv("GEMINI_API_KEY", "")
+
+_gemini_key = _get_gemini_key()
+if _gemini_key:
+    genai.configure(api_key=_gemini_key)
 _gemini_model = genai.GenerativeModel("gemini-2.0-flash")
 
 def generate_animation_script(
@@ -108,19 +118,12 @@ def generate_animation_script(
                     "w_pct": node.get("w_pct", 0), "h_pct": node.get("h_pct", 0)
                 }
                 
-                # Millisecond accurate zoom
+                # Millisecond accurate panning
                 events.append({
-                    "event_type": "diagram_zoom_in",
-                    "timestamp_ms": max(200, trigger_ms - 200), # Just 200ms before word
-                    "data": {"region": bbox, "zoom_scale": 2.2, "hold_ms": 3000}
+                    "event_type": "process_flow_pan",
+                    "start_ms": max(200, trigger_ms - 200),
+                    "data": {"region": bbox, "zoom_scale": 1.8, "hold_ms": 3000}
                 })
-                # Millisecond accurate annotation right on the word
-                events.append({
-                    "event_type": "diagram_annotate_circle",
-                    "timestamp_ms": trigger_ms,
-                    "data": {"region": bbox, "annotation_color": "#00E5FF"}
-                })
-                
                 # Flow arrows perfectly timed
                 for conn in connections:
                     if conn.get("from_id") == node.get("id"):
@@ -138,15 +141,15 @@ def generate_animation_script(
                                 arrow_ms = next_ms - 600 # Flow arrow 600ms before next node
                             
                             events.append({
-                                "event_type": "diagram_flow_arrow",
-                                "timestamp_ms": arrow_ms,
+                                "event_type": "flow_arrow_draw",
+                                "start_ms": arrow_ms,
                                 "data": {"from_region": bbox, "to_region": next_bbox, "label": conn.get("label", "")}
                             })
                 
                 # Zoom out gracefully if needed
                 events.append({
                     "event_type": "diagram_zoom_out",
-                    "timestamp_ms": trigger_ms + 2800,
+                    "start_ms": trigger_ms + 2800,
                     "data": {}
                 })
 
@@ -168,36 +171,36 @@ def generate_animation_script(
             e_bbox = {"x_pct": effect.get("x_pct",0), "y_pct": effect.get("y_pct",0), "w_pct": effect.get("w_pct",0), "h_pct": effect.get("h_pct",0)}
             
             events.append({
-                "event_type": "diagram_zoom_in",
-                "timestamp_ms": max(100, c_trigger_ms - 200),
-                "data": {"region": c_bbox, "zoom_scale": 2.0, "hold_ms": e_trigger_ms - c_trigger_ms}
+                "event_type": "process_flow_pan",
+                "start_ms": max(100, c_trigger_ms - 200),
+                "data": {"region": c_bbox, "zoom_scale": 1.8, "hold_ms": e_trigger_ms - c_trigger_ms}
             })
             events.append({
-                "event_type": "diagram_highlight_region",
-                "timestamp_ms": c_trigger_ms,
+                "event_type": "cause_highlight",
+                "start_ms": c_trigger_ms,
                 "data": {"region": c_bbox, "annotation_color": "#FF4444"}
             })
             
             if parsed_json.get("connection_exists"):
                 events.append({
-                    "event_type": "diagram_flow_arrow",
-                    "timestamp_ms": c_trigger_ms + 1000,
+                    "event_type": "dramatic_arrow",
+                    "start_ms": c_trigger_ms + 1000,
                     "data": {"from_region": c_bbox, "to_region": e_bbox, "label": "causes"}
                 })
                 
             events.append({
-                "event_type": "diagram_zoom_in",
-                "timestamp_ms": max(100, e_trigger_ms - 200),
-                "data": {"region": e_bbox, "zoom_scale": 2.0, "hold_ms": 2500}
+                "event_type": "process_flow_pan",
+                "start_ms": max(100, e_trigger_ms - 200),
+                "data": {"region": e_bbox, "zoom_scale": 1.8, "hold_ms": 2500}
             })
             events.append({
-                "event_type": "diagram_highlight_region",
-                "timestamp_ms": e_trigger_ms,
+                "event_type": "effect_reveal",
+                "start_ms": e_trigger_ms,
                 "data": {"region": e_bbox, "annotation_color": "#44FF88"}
             })
             events.append({
                 "event_type": "diagram_zoom_out",
-                "timestamp_ms": e_trigger_ms + 2500,
+                "start_ms": e_trigger_ms + 2500,
                 "data": {}
             })
 
@@ -217,7 +220,7 @@ def generate_animation_script(
                 if i == 0:
                     events.append({
                         "event_type": "diagram_overview",
-                        "timestamp_ms": 500,
+                        "start_ms": 500,
                         "data": {}
                     })
                 
@@ -230,12 +233,12 @@ def generate_animation_script(
                 # Move cursor a bit before zooming
                 events.append({
                     "event_type": "diagram_cursor_move",
-                    "timestamp_ms": max(0, trigger_ms - 400),
+                    "start_ms": max(0, trigger_ms - 400),
                     "data": {"region": center_coords}
                 })
                 events.append({
-                    "event_type": "diagram_zoom_in",
-                    "timestamp_ms": max(0, trigger_ms - 150),
+                    "event_type": "sequential_zoom_per_region",
+                    "start_ms": max(0, trigger_ms - 150),
                     "data": {"region": bbox, "zoom_scale": 2.4, "hold_ms": 2500}
                 })
                 
@@ -244,12 +247,12 @@ def generate_animation_script(
                 
                 events.append({
                     "event_type": ev_type,
-                    "timestamp_ms": trigger_ms,
+                    "start_ms": trigger_ms,
                     "data": {"region": bbox, "annotation_color": "#00E5FF" if ann_type=="circle" else "#FF4444"}
                 })
                 events.append({
                     "event_type": "diagram_zoom_out",
-                    "timestamp_ms": trigger_ms + 2500,
+                    "start_ms": trigger_ms + 2500,
                     "data": {}
                 })
             
@@ -267,19 +270,19 @@ def generate_animation_script(
                         
                     events.append({
                         "event_type": "diagram_flow_arrow",
-                        "timestamp_ms": conn_ms,
+                        "start_ms": conn_ms,
                         "data": {"from_region": f_bbox, "to_region": t_bbox, "label": conn.get("label", "")}
                     })
 
         # Step 8: Apply Cognitive Load Rules (Clean up overlapping animations)
-        events.sort(key=lambda x: x["timestamp_ms"])
+        events.sort(key=lambda x: x.get("start_ms", 0))
         
         # Ensure no harsh camera cuts within 600ms of each other
         for i in range(1, len(events)):
-            if events[i]["timestamp_ms"] - events[i-1]["timestamp_ms"] < 600:
-                # If they are both zooms, delay the second one slightly
-                if "zoom" in events[i]["event_type"] and "zoom" in events[i-1]["event_type"]:
-                    events[i]["timestamp_ms"] = events[i-1]["timestamp_ms"] + 700
+            if events[i].get("start_ms", 0) - events[i-1].get("start_ms", 0) < 600:
+                # If they are both zooms/pans, delay the second one slightly
+                if any(k in events[i]["event_type"] for k in ["zoom", "pan"]) and any(k in events[i-1]["event_type"] for k in ["zoom", "pan"]):
+                    events[i]["start_ms"] = events[i-1].get("start_ms", 0) + 700
 
         # Bullet collision check
         bullets = scene.get("bullets", [])
@@ -289,18 +292,19 @@ def generate_animation_script(
                 tw = b.get("trigger_word", "")
                 bullet_ms_list.append(get_phrase_ms(tw, 0))
                 
+        _CAMERA_EVENTS = {"diagram_zoom_in", "process_flow_pan", "sequential_zoom_per_region"}
         for ev in events:
-            if ev["event_type"] == "diagram_zoom_in":
+            if ev["event_type"] in _CAMERA_EVENTS:
                 for b_ms in bullet_ms_list:
-                    if abs(ev["timestamp_ms"] - b_ms) < 400:
-                        ev["timestamp_ms"] += 500
+                    if abs(ev.get("start_ms", 0) - b_ms) < 400:
+                        ev["start_ms"] = ev.get("start_ms", 0) + 500
 
-        events.sort(key=lambda x: x["timestamp_ms"])
+        events.sort(key=lambda x: x.get("start_ms", 0))
         
         # Conform to timeline_builder expected format
         for ev in events:
-            ev["start_ms"] = ev["timestamp_ms"]
-            ev["end_ms"] = ev["start_ms"] + ev.get("data", {}).get("hold_ms", 1000)
+            if "end_ms" not in ev:
+                ev["end_ms"] = ev.get("start_ms", 0) + ev.get("data", {}).get("hold_ms", 1000)
 
         return events
 

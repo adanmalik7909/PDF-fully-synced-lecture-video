@@ -118,12 +118,16 @@ body.scene-ready { opacity: 1; }
 ═══════════════════════════════════ */
 .slide-heading {
     font-family: 'Playfair Display', serif;
-    font-size: 54px;
+    font-size: 42px; /* reduced from 54px to restrict size */
     font-weight: 700;
-    line-height: 1.16;
+    line-height: 1.2;
     color: var(--white);
     text-shadow: 0 2px 8px rgba(0,0,0,0.6);
     margin-bottom: 24px;
+    display: -webkit-box;
+    -webkit-line-clamp: 4; /* strict boundary */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
     transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1),
                 color 0.4s ease,
                 text-shadow 0.4s ease;
@@ -160,11 +164,15 @@ body.scene-ready { opacity: 1; }
    DESCRIPTION — Left Panel
 ═══════════════════════════════════ */
 .slide-description {
-    font-size: 19px;
-    line-height: 1.7;
+    font-size: 18px; /* Slightly reduced */
+    line-height: 1.6;
     color: rgba(255,255,255,0.58);
     font-weight: 400;
     margin-bottom: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 6; /* strict boundary */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 /* ═══════════════════════════════════
@@ -252,8 +260,8 @@ body.scene-ready { opacity: 1; }
     gap: 18px;
     padding: 18px 0;
     border-bottom: 1px solid rgba(26, 37, 53, 0.09);
-    opacity: 0;
-    transform: translateX(-24px);
+    opacity: 0.85;
+    transform: translateX(0);
     transition:
         opacity 0.5s cubic-bezier(0.23, 1, 0.32, 1),
         transform 0.5s cubic-bezier(0.23, 1, 0.32, 1),
@@ -270,24 +278,32 @@ body.scene-ready { opacity: 1; }
 }
 .b-active {
     opacity: 1 !important;
-    background: rgba(74, 143, 224, 0.06);
-    border-radius: 10px;
-    padding: 18px 14px !important;
-    margin: 0 -14px;
+    background: rgba(255, 255, 255, 0.6) !important;
+    border: 2px solid var(--gold) !important;
+    border-radius: 12px;
+    padding: 16px 16px !important;
+    margin: 0 -16px;
+    box-shadow: 0 4px 16px rgba(212, 168, 83, 0.25) !important;
+    transform: scale(1.02);
 }
 .b-active .bullet-num {
-    background: var(--navy) !important;
-    color: var(--white) !important;
+    background: var(--gold) !important;
+    color: var(--navy) !important;
     transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(212, 168, 83, 0.4);
 }
 .b-active .bullet-text {
-    color: var(--dark-text) !important;
-    font-weight: 500 !important;
+    color: var(--navy) !important;
+    font-weight: 700 !important;
+    text-shadow: none !important;
 }
 .b-done {
-    opacity: 0.35 !important;
+    opacity: 1 !important;
+    background: transparent !important;
+    border: 2px solid transparent !important;
+    box-shadow: none !important;
+    transform: scale(1) !important;
 }
-.b-done .bullet-num { background: rgba(26,37,53,0.06) !important; }
 
 .bullet-num {
     flex-shrink: 0;

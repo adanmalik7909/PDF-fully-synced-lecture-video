@@ -275,9 +275,26 @@ Provide the output matching the schema."""
                 if has_diagram:
                     scene_dict["diagram_refs"] = [diagram_path]
                     scene_dict["diagram_paths"] = [diagram_path]
+                    if diagram_spatial_data and diagram_path in diagram_spatial_data:
+                        spatial_info = diagram_spatial_data[diagram_path]
+                        if isinstance(spatial_info, dict) and "visual" in spatial_info:
+                            scene_dict["diagram_data"] = spatial_info["visual"]
+                        else:
+                            scene_dict["diagram_data"] = spatial_info
+                    else:
+                        scene_dict["diagram_data"] = {}
+                        
+                    # Force layout preset to a diagram-supporting layout
+                    if scene_dict.get("scene_type") not in ["diagram_spatial", "process_flow"]:
+                        scene_dict["scene_type"] = "diagram_spatial"
+                        if isinstance(scene_dict.get("scene_dna"), dict):
+                            scene_dict["scene_dna"]["layout_preset"] = "diagram_spatial"
+                            scene_dict["scene_dna"]["dna_type"] = "DNA-5 DIAGRAM_SPATIAL"
+                            scene_dict["scene_dna"]["narration_style"] = "guided_tour"
                 else:
                     scene_dict["diagram_refs"] = []
                     scene_dict["diagram_paths"] = []
+                    scene_dict["diagram_data"] = {}
 
                 # Fallback list for zoom keywords
                 scene_dict["zoom_words"] = [b.get("zoom_word") for b in scene_dict.get("bullets", []) if b.get("zoom_word")]
@@ -339,6 +356,7 @@ Provide the output matching the schema."""
                     ],
                     "diagram_refs": [diagram_path] if has_diagram else [],
                     "diagram_paths": [diagram_path] if has_diagram else [],
+                    "diagram_data": diagram_spatial_data[diagram_path]["visual"] if (has_diagram and diagram_spatial_data and diagram_path in diagram_spatial_data and isinstance(diagram_spatial_data[diagram_path], dict) and "visual" in diagram_spatial_data[diagram_path]) else (diagram_spatial_data[diagram_path] if (has_diagram and diagram_spatial_data and diagram_path in diagram_spatial_data) else {}),
                     "diagram_trigger_word": "examine",
                     "zoom_words": ["element"]
                 })
