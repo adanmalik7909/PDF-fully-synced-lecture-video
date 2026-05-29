@@ -66,7 +66,7 @@ class FFmpegPipeline:
         "BorderStyle=3,"                 # box with outline
         "Alignment=2,"                   # bottom-center
         "MarginV=100,"                   # 100px from bottom
-        "MarginL=400,"                   # 400px from left (clears the 288px avatar at x=80)
+        "MarginL=540,"                   # 540px from left (clears the 288px avatar at x=236)
         "MarginR=120"
     )
 
@@ -144,7 +144,7 @@ class FFmpegPipeline:
                 f"[1:v]scale={avatar_size}:{avatar_size},format=yuva420p,{circle_mask}[av];"
                 f"color=c=0x{accent_color}:s={total_size}x{total_size}:d=1,format=yuva420p,{ring_mask}[ring];"
                 f"[ring][av]overlay={border_size}:{border_size}[styled_av];"
-                f"[0:v][styled_av]overlay=80:H-h-80[tmp_v];"
+                f"[0:v][styled_av]overlay=236:H-h-80[tmp_v];"
                 f"[tmp_v]ass='{safe_ass}'[vout]"
             )
             

@@ -64,32 +64,27 @@ class TimelineBuilder:
         # V13: Cognitive Load Optimization (resolve conflicts, add breathe moments)
         events = self._optimize_cognitive_load(events)
 
-        # ── Animation Brain: Intelligent diagram events ─────────────
-        if self.scene.get("diagram_refs") and len(self.scene["diagram_refs"]) > 0:
-            from core.animation_brain import generate_animation_script
-            primary_diagram_path = self.scene["diagram_refs"][0]
-            
-            # Make sure we find the existing file path
-            actual_path = None
-            candidates = [
-                primary_diagram_path,
-                os.path.join("backend", primary_diagram_path) if not primary_diagram_path.startswith("backend") else primary_diagram_path,
-                os.path.join("static/uploads/diagrams", os.path.basename(str(primary_diagram_path))),
-                os.path.join("backend/static/uploads/diagrams", os.path.basename(str(primary_diagram_path))),
-            ]
-            for cand in candidates:
-                if cand and os.path.exists(cand):
-                    actual_path = cand
-                    break
-                    
-            if actual_path:
-                brain_events = generate_animation_script(
+        # ── Animation Brain: intelligent content-aware events ──────
+        _diagram_path = None
+        if self.scene.get("diagram_refs"):
+            _diagram_path = self.scene["diagram_refs"][0]
+        elif self.scene.get("formula_refs"):
+            _diagram_path = self.scene["formula_refs"][0]
+
+        if _diagram_path or self.scene.get("table_data") or self.scene.get("formula_refs"):
+            try:
+                from core.animation_brain import generate_animation_script
+                _brain_events = generate_animation_script(
                     scene=self.scene,
                     word_timestamps=self.words,
-                    diagram_image_path=actual_path
+                    diagram_image_path=_diagram_path
                 )
-                events.extend(brain_events)
-        # ─────────────────────────────────────────────────────────────
+                if _brain_events:
+                    events.extend(_brain_events)
+            except Exception as _e:
+                print(f"[TimelineBuilder] AnimationBrain skipped: {_e}")
+        # ───────────────────────────────────────────────────────────
+
 
         # Sort by start_ms
         events.sort(key=lambda e: e["start_ms"])

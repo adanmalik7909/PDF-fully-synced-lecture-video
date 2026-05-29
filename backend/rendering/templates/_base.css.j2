@@ -273,34 +273,49 @@ body.scene-ready { opacity: 1; }
 
 /* Bullet states */
 .b-visible {
-    opacity: 0.75 !important;
+    opacity: 0.95 !important;
     transform: translateX(0) !important;
 }
 .b-active {
     opacity: 1 !important;
-    background: rgba(255, 255, 255, 0.6) !important;
-    border: 2px solid var(--gold) !important;
-    border-radius: 12px;
-    padding: 16px 16px !important;
-    margin: 0 -16px;
-    box-shadow: 0 4px 16px rgba(212, 168, 83, 0.25) !important;
-    transform: scale(1.02);
+    background: rgba(255, 255, 255, 0.96) !important;
+    border: 2.5px solid var(--gold) !important;
+    border-radius: 14px !important;
+    padding: 18px 22px !important;
+    margin: 6px -22px !important;
+    box-shadow: 0 12px 36px rgba(212, 168, 83, 0.45), 0 0 15px rgba(212, 168, 83, 0.2) !important;
+    transform: scale(1.03) translateY(-3px) !important;
+    transition: all 0.4s cubic-bezier(0.25, 1, 0.32, 1) !important;
+    z-index: 5;
+}
+/* If the active bullet/card is inside a dark panel */
+.left-panel .b-active,
+.left-panel .bullet.b-active,
+.table-bullets-zone .b-active {
+    background: var(--navy-light) !important;
+    border-color: var(--gold) !important;
+    box-shadow: 0 12px 36px rgba(212, 168, 83, 0.35) !important;
 }
 .b-active .bullet-num {
     background: var(--gold) !important;
     color: var(--navy) !important;
-    transform: scale(1.1);
-    box-shadow: 0 0 10px rgba(212, 168, 83, 0.4);
+    transform: scale(1.15) !important;
+    box-shadow: 0 0 15px rgba(212, 168, 83, 0.6) !important;
 }
 .b-active .bullet-text {
     color: var(--navy) !important;
     font-weight: 700 !important;
     text-shadow: none !important;
 }
+/* Dark panels active text stays light instead of dark navy */
+.left-panel .b-active .bullet-text,
+.table-bullets-zone .b-active .bullet-text {
+    color: var(--white) !important;
+}
 .b-done {
-    opacity: 1 !important;
+    opacity: 0.95 !important; /* Keep it fully visible, no fading! */
     background: transparent !important;
-    border: 2px solid transparent !important;
+    border: 2.5px solid transparent !important;
     box-shadow: none !important;
     transform: scale(1) !important;
 }

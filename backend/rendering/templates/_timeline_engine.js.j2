@@ -57,6 +57,257 @@
         });
     }
 
+    // ── Diagram Intelligence Helpers ──────────────────────────
+    (function() {
+      var _diagImg = document.getElementById('diagram-img');
+      var _annSVG  = document.getElementById('annotation-svg') || document.getElementById('diagram-svg-overlay');
+      var _cursor  = document.getElementById('cursor-dot');
+
+      window.DiagAnim = {
+        _getImgRect: function() {
+          return _diagImg ? _diagImg.getBoundingClientRect() : null;
+        },
+        _getSVGRect: function() {
+          return _annSVG ? _annSVG.getBoundingClientRect() : null;
+        },
+        regionToPx: function(r) {
+          var ir = this._getImgRect();
+          if (!ir) return null;
+          return {
+            x:  ir.left + r.x_pct * ir.width,
+            y:  ir.top  + r.y_pct * ir.height,
+            w:  r.w_pct * ir.width,
+            h:  r.h_pct * ir.height,
+            cx: ir.left + (r.x_pct + r.w_pct/2) * ir.width,
+            cy: ir.top  + (r.y_pct + r.h_pct/2) * ir.height
+          };
+        },
+        zoomTo: function(region, scale, dur) {
+          var wrap = document.getElementById('diagram-zoom-wrapper') || document.getElementById('diagram-viewport');
+          if (!wrap || !_diagImg) return;
+          var ir = _diagImg.getBoundingClientRect();
+          var rcx = (region.x_pct + region.w_pct/2) * ir.width;
+          var rcy = (region.y_pct + region.h_pct/2) * ir.height;
+          gsap.to(wrap, {
+            scale: scale || 2.2,
+            x: (ir.width/2 - rcx) * (scale || 2.2),
+            y: (ir.height/2 - rcy) * (scale || 2.2),
+            duration: dur || 0.9,
+            ease: 'power3.inOut'
+          });
+        },
+        zoomOut: function(dur) {
+          var wrap = document.getElementById('diagram-zoom-wrapper') || document.getElementById('diagram-viewport');
+          if (!wrap) return;
+          gsap.to(wrap, {scale:1, x:0, y:0, duration: dur||0.85, ease:'power2.inOut'});
+        },
+        drawCircle: function(region, color) {
+          if (!_annSVG) _annSVG = document.getElementById('annotation-svg') || document.getElementById('diagram-svg-overlay');
+          if (!_diagImg) _diagImg = document.getElementById('diagram-img');
+          if (!_annSVG || !_diagImg) return;
+          var ir = _diagImg.getBoundingClientRect();
+          var sr = _annSVG.getBoundingClientRect();
+          var ox = ir.left - sr.left, oy = ir.top - sr.top;
+          var cx = ox + (region.x_pct + region.w_pct/2) * ir.width;
+          var cy = oy + (region.y_pct + region.h_pct/2) * ir.height;
+          var rx = region.w_pct * ir.width / 2 + 12;
+          var ry = region.h_pct * ir.height / 2 + 12;
+          var el = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+          el.setAttribute('cx',cx); el.setAttribute('cy',cy);
+          el.setAttribute('rx',rx); el.setAttribute('ry',ry);
+          el.setAttribute('fill','none'); el.setAttribute('stroke', color||'#00E5FF');
+          el.setAttribute('stroke-width','3.5'); el.setAttribute('opacity','0');
+          var perim = 2*Math.PI*Math.sqrt((rx*rx+ry*ry)/2);
+          el.setAttribute('stroke-dasharray',perim);
+          el.setAttribute('stroke-dashoffset',perim);
+          el.setAttribute('filter','drop-shadow(0 0 6px '+(color||'#00E5FF')+')');
+          _annSVG.appendChild(el);
+          gsap.to(el,{opacity:1, strokeDashoffset:0, duration:1.3, ease:'power2.out'});
+          setTimeout(function(){gsap.to(el,{opacity:0,duration:0.5,onComplete:function(){el.remove()}})},5000);
+        },
+        drawHighlight: function(region, color) {
+          if (!_annSVG) _annSVG = document.getElementById('annotation-svg') || document.getElementById('diagram-svg-overlay');
+          if (!_diagImg) _diagImg = document.getElementById('diagram-img');
+          if (!_annSVG || !_diagImg) return;
+          var ir = _diagImg.getBoundingClientRect();
+          var sr = _annSVG.getBoundingClientRect();
+          var x = (ir.left - sr.left) + region.x_pct * ir.width - 8;
+          var y = (ir.top  - sr.top)  + region.y_pct * ir.height - 8;
+          var w = region.w_pct * ir.width + 16;
+          var h = region.h_pct * ir.height + 16;
+          var el = document.createElementNS('http://www.w3.org/2000/svg','rect');
+          el.setAttribute('x',x); el.setAttribute('y',y);
+          el.setAttribute('width',w); el.setAttribute('height',h); el.setAttribute('rx','8');
+          el.setAttribute('fill',(color||'#FF4444')+'33');
+          el.setAttribute('stroke',color||'#FF4444'); el.setAttribute('stroke-width','2.5');
+          el.setAttribute('opacity','0');
+          _annSVG.appendChild(el);
+          gsap.to(el,{opacity:1,duration:0.4,ease:'power2.out'});
+          gsap.to(el,{opacity:1,boxShadow:'0 0 20px '+(color||'#FF4444'),yoyo:true,repeat:2,duration:0.5,delay:0.5});
+          setTimeout(function(){gsap.to(el,{opacity:0,duration:0.4,onComplete:function(){el.remove()}})},5500);
+        },
+        drawArrow: function(fromR, toR, label, color) {
+          if (!_annSVG) _annSVG = document.getElementById('annotation-svg') || document.getElementById('diagram-svg-overlay');
+          if (!_diagImg) _diagImg = document.getElementById('diagram-img');
+          if (!_annSVG || !_diagImg) return;
+          var ir = _diagImg.getBoundingClientRect();
+          var sr = _annSVG.getBoundingClientRect();
+          var ox = ir.left - sr.left, oy = ir.top - sr.top;
+          var x1 = ox + (fromR.x_pct + fromR.w_pct) * ir.width;
+          var y1 = oy + (fromR.y_pct + fromR.h_pct/2) * ir.height;
+          var x2 = ox + toR.x_pct * ir.width;
+          var y2 = oy + (toR.y_pct + toR.h_pct/2) * ir.height;
+          var c  = color || '#FFD700';
+          var mid = Date.now();
+          var ns = 'http://www.w3.org/2000/svg';
+          var defs = _annSVG.querySelector('defs') || _annSVG.insertBefore(document.createElementNS(ns,'defs'),_annSVG.firstChild);
+          var mkId = 'mk'+mid;
+          var mk = document.createElementNS(ns,'marker');
+          mk.setAttribute('id',mkId); mk.setAttribute('viewBox','0 0 10 10');
+          mk.setAttribute('refX','8'); mk.setAttribute('refY','5');
+          mk.setAttribute('markerWidth','7'); mk.setAttribute('markerHeight','7');
+          mk.setAttribute('orient','auto');
+          var mp = document.createElementNS(ns,'path');
+          mp.setAttribute('d','M2 1L8 5L2 9'); mp.setAttribute('fill','none');
+          mp.setAttribute('stroke',c); mp.setAttribute('stroke-width','1.5');
+          mp.setAttribute('stroke-linecap','round');
+          mk.appendChild(mp); defs.appendChild(mk);
+          var pLen = Math.sqrt(Math.pow(x2-x1,2)+Math.pow(y2-y1,2));
+          var line = document.createElementNS(ns,'line');
+          line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+          line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+          line.setAttribute('stroke',c); line.setAttribute('stroke-width','3');
+          line.setAttribute('marker-end','url(#'+mkId+')');
+          line.setAttribute('stroke-dasharray',pLen); line.setAttribute('stroke-dashoffset',pLen);
+          line.setAttribute('opacity','0');
+          line.setAttribute('filter','drop-shadow(0 0 4px '+c+')');
+          _annSVG.appendChild(line);
+          gsap.to(line,{opacity:1,strokeDashoffset:0,duration:0.85,ease:'power2.inOut'});
+          if (label) {
+            var txt = document.createElementNS(ns,'text');
+            txt.setAttribute('x',(x1+x2)/2); txt.setAttribute('y',(y1+y2)/2-12);
+            txt.setAttribute('text-anchor','middle'); txt.setAttribute('fill',c);
+            txt.setAttribute('font-size','14'); txt.setAttribute('font-weight','600');
+            txt.setAttribute('opacity','0'); txt.textContent = label;
+            _annSVG.appendChild(txt);
+            gsap.to(txt,{opacity:1,duration:0.3,delay:0.8});
+          }
+          setTimeout(function(){gsap.to(line,{opacity:0,duration:0.4,onComplete:function(){line.remove()}})},6000);
+        },
+        moveCursor: function(region) {
+          if (!_cursor) _cursor = document.getElementById('cursor-dot');
+          if (!_cursor) return;
+          var px = this.regionToPx(region);
+          if (!px) return;
+          if (parseFloat(_cursor.style.opacity||0) < 0.1) {
+            gsap.set(_cursor, {left:px.cx, top:px.cy, opacity:0});
+            gsap.to(_cursor, {opacity:1, duration:0.3});
+          } else {
+            gsap.to(_cursor, {left:px.cx, top:px.cy, duration:0.65, ease:'power2.inOut'});
+          }
+          gsap.fromTo(_cursor,{scale:1},{scale:1.9,duration:0.3,ease:'power2.out',
+            onComplete:function(){gsap.to(_cursor,{scale:1,duration:0.2})}});
+        },
+        clearAll: function() {
+          if (_annSVG) {
+            var children = Array.from(_annSVG.children);
+            children.forEach(function(c){ if(c.tagName!=='defs') gsap.to(c,{opacity:0,duration:0.3,onComplete:function(){c.remove()}}); });
+          }
+          if (_cursor) gsap.to(_cursor,{opacity:0,duration:0.3});
+        }
+      };
+    })();
+
+    // ── Table Animation Helpers ───────────────────────────────
+    window.TableAnim = {
+      focusRow: function(rowIndex, color) {
+        var table = document.querySelector('#table-container table') || document.querySelector('table');
+        if (!table) return;
+        var rows = table.querySelectorAll('tr');
+        if (rows[rowIndex + 1]) {
+          var cells = rows[rowIndex + 1].querySelectorAll('td');
+          cells.forEach(function(cell) {
+            gsap.to(cell, {backgroundColor: (color||'#00E5FF')+'22', boxShadow: 'inset 0 0 0 2px '+(color||'#00E5FF'), duration:0.4, ease:'power2.out'});
+          });
+          gsap.fromTo(rows[rowIndex+1], {y:4},{y:0,duration:0.4,ease:'back.out(1.7)'});
+        }
+      },
+      focusColumn: function(colIndex, color) {
+        var table = document.querySelector('#table-container table') || document.querySelector('table');
+        if (!table) return;
+        table.querySelectorAll('tr').forEach(function(row) {
+          var cells = row.querySelectorAll('td, th');
+          if (cells[colIndex]) {
+            gsap.to(cells[colIndex], {backgroundColor:(color||'#FFD700')+'22', boxShadow:'inset 0 0 0 2px '+(color||'#FFD700'), duration:0.4});
+          }
+        });
+      },
+      spotlightCell: function(rowIdx, colIdx, color) {
+        var table = document.querySelector('#table-container table') || document.querySelector('table');
+        if (!table) return;
+        var rows = table.querySelectorAll('tr');
+        if (rows[rowIdx+1]) {
+          var cells = rows[rowIdx+1].querySelectorAll('td');
+          if (cells[colIdx]) {
+            gsap.to(cells[colIdx], {backgroundColor:(color||'#44FF88')+'44', boxShadow:'inset 0 0 0 3px '+(color||'#44FF88')+', 0 0 12px '+(color||'#44FF88')+'66', scale:1.04, duration:0.4, ease:'back.out(1.7)'});
+          }
+        }
+      }
+    };
+
+    // ── Formula Animation Helpers ─────────────────────────────
+    window.FormulaAnim = {
+      _steps: [],
+      init: function(steps) { this._steps = steps || []; },
+      revealStep: function(stepIndex, latex, explanation) {
+        var container = document.getElementById('formula-steps-container');
+        if (!container) return;
+        var stepEl = document.createElement('div');
+        stepEl.className = 'formula-step';
+        stepEl.id = 'fstep-' + stepIndex;
+        stepEl.style.opacity = '0';
+        stepEl.style.transform = 'translateY(20px)';
+        stepEl.style.marginBottom = '12px';
+        stepEl.style.padding = '12px';
+        stepEl.style.borderRadius = '8px';
+        stepEl.style.background = 'rgba(255,255,255,0.03)';
+        stepEl.style.borderLeft = '3px solid #FFD700';
+
+        var formulaDiv = document.createElement('div');
+        formulaDiv.className = 'formula-render';
+        formulaDiv.id = 'frender-' + stepIndex;
+        formulaDiv.style.fontSize = '24px';
+        formulaDiv.style.marginBottom = '6px';
+
+        var explDiv = document.createElement('div');
+        explDiv.className = 'formula-explain';
+        explDiv.textContent = explanation || '';
+        explDiv.style.color = 'rgba(255,255,255,0.7)';
+        explDiv.style.fontSize = '16px';
+
+        stepEl.appendChild(formulaDiv);
+        stepEl.appendChild(explDiv);
+        container.appendChild(stepEl);
+        if (window.katex && latex) {
+          try {
+            katex.render(latex, formulaDiv, {displayMode: true, throwOnError: false});
+          } catch(e) {
+            formulaDiv.textContent = latex;
+          }
+        } else {
+          formulaDiv.textContent = latex || '';
+        }
+        gsap.to(stepEl, {opacity:1, y:0, duration:0.6, ease:'power2.out'});
+        gsap.fromTo(formulaDiv, {filter:'drop-shadow(0 0 0px #FFD700)'},{filter:'drop-shadow(0 0 14px #FFD700)',duration:0.5,delay:0.4,yoyo:true,repeat:1});
+      },
+      highlightTerm: function(term, color) {
+        var renderEls = document.querySelectorAll('.formula-render .katex');
+        renderEls.forEach(function(el) {
+          gsap.to(el, {color: color||'#FFD700', textShadow:'0 0 12px '+(color||'#FFD700'), duration:0.4, yoyo:true, repeat:1});
+        });
+      }
+    };
+
     /* ─── Fade scene in ────────────────────────────────────── */
     document.body.classList.add('scene-ready');
 
@@ -724,7 +975,7 @@
         if (t === 'bullet_active') {
             const idx = d.index;
             if (idx === undefined) return;
-            qa('.bullet').forEach((b, i) => {
+            qa('.bullet, .legend-card, .step-card').forEach((b, i) => {
                 if (i < idx) {
                     b.classList.remove('b-active');
                     b.classList.add('b-done');
@@ -1980,165 +2231,85 @@
            V15 — FORMULA & TABLE & ANIMATION BRAIN HANDLERS
         ═══════════════════════════════════════════════════════ */
 
-        /* ── formula_step: reveal formula step with spring animation ── */
-        if (t === 'formula_step') {
-            const stepIdx = d.step_index;
-            const el = $('formula-step-' + stepIdx);
-            if (el && G) {
-                el.style.display = 'block';
-                G.fromTo(el,
-                    {opacity: 0, scale: 0.85, y: 20},
-                    {opacity: 1, scale: 1, y: 0, duration: 0.6, ease: 'back.out(1.7)'}
-                );
-                // Golden glow pulse
-                G.to(el, {
-                    boxShadow: '0 0 30px rgba(255,215,0,0.6), 0 0 60px rgba(255,215,0,0.2)',
-                    duration: 0.4, delay: 0.3, yoyo: true, repeat: 1
-                });
+        /* ── formula_step_reveal: step reveal KaTeX ── */
+        if (t === 'formula_step_reveal') {
+            if (d && window.FormulaAnim) {
+                FormulaAnim.revealStep(d.step_index, d.latex, d.explanation);
             }
         }
 
-        /* ── table_focus: highlight row or column with golden glow ── */
-        if (t === 'table_focus') {
-            const focusType = d.focus_type; // 'row' or 'column'
-            const focusIdx = d.focus_index;
-            // Dim all rows
-            qa('.table-row').forEach(r => {
-                if (G) G.to(r, {opacity: 0.35, duration: 0.3});
-            });
-            if (focusType === 'row') {
-                const row = document.querySelector('.table-row[data-row="' + focusIdx + '"]');
-                if (row && G) {
-                    G.to(row, {opacity: 1, duration: 0.3});
-                    row.classList.add('table-row-focused');
-                    G.to(row, {
-                        boxShadow: '0 0 20px rgba(255,215,0,0.4), inset 0 0 10px rgba(255,215,0,0.1)',
-                        duration: 0.4, delay: 0.1
-                    });
-                    setTimeout(() => {
-                        row.classList.remove('table-row-focused');
-                        qa('.table-row').forEach(r => { if (G) G.to(r, {opacity: 1, duration: 0.4}); });
-                        if (G) G.to(row, {boxShadow: 'none', duration: 0.3});
-                    }, durMs || 3000);
-                }
-            } else if (focusType === 'column') {
-                const cells = qa('.table-cell[data-col="' + focusIdx + '"]');
-                const headerCell = document.querySelector('.table-header-cell[data-col="' + focusIdx + '"]');
-                // Restore all rows first
-                qa('.table-row').forEach(r => { if (G) G.to(r, {opacity: 1, duration: 0.3}); });
-                // Highlight column cells
-                cells.forEach(cell => {
-                    if (G) G.to(cell, {
-                        background: 'rgba(255,215,0,0.15)',
-                        boxShadow: '0 0 15px rgba(255,215,0,0.3)',
-                        duration: 0.4
-                    });
-                });
-                if (headerCell && G) {
-                    G.to(headerCell, {
-                        background: 'rgba(255,215,0,0.3)',
-                        duration: 0.4
-                    });
-                }
-                setTimeout(() => {
-                    cells.forEach(cell => {
-                        if (G) G.to(cell, {background: 'transparent', boxShadow: 'none', duration: 0.3});
-                    });
-                    if (headerCell && G) G.to(headerCell, {background: '', duration: 0.3});
-                }, durMs || 3000);
+        /* ── formula_term_highlight: math term highlight ── */
+        if (t === 'formula_term_highlight') {
+            if (d && window.FormulaAnim) {
+                FormulaAnim.highlightTerm(d.term, d.color || '#FFD700');
             }
         }
 
-        /* ── zoom_to_region: Animation Brain pan/zoom with annotations ── */
-        if (t === 'zoom_to_region') {
-            const vp = $('diagram-viewport') || $('diagram-zoom-target') || $('diagram-wrapper');
-            const img = $('diagram-img');
-            
-            // Translate bbox to region if missing
-            if (vp && !d.region && d.bbox) {
-                const [bx, by, bw, bh] = d.bbox;
-                d.region = { x_pct: bx, y_pct: by, w_pct: bw, h_pct: bh };
+        /* ── table_row_focus: highlight table row ── */
+        if (t === 'table_row_focus') {
+            if (d && window.TableAnim) {
+                TableAnim.focusRow(d.row_index, d.color || '#00E5FF');
             }
-            
-            if (vp && d.region) {
-                const r = d.region;
-                const scale = d.zoom_scale || 2.0;
-                const vpW = vp.offsetWidth || 1800;
-                const vpH = vp.offsetHeight || 780;
-                const cx = r.x_pct + r.w_pct / 2;
-                const cy = r.y_pct + r.h_pct / 2;
-                let tx = (0.5 - cx) * vpW;
-                let ty = (0.5 - cy) * vpH;
-                const maxTx = (vpW * (scale - 1)) / (2 * scale);
-                const maxTy = (vpH * (scale - 1)) / (2 * scale);
-                tx = Math.max(-maxTx, Math.min(maxTx, tx));
-                ty = Math.max(-maxTy, Math.min(maxTy, ty));
-                if (G) {
-                    G.to(vp, {scale: scale, x: tx, y: ty, transformOrigin: '50% 50%', duration: 0.8, ease: 'power2.inOut'});
-                }
-                // Draw annotation
-                if (d.annotation_type === 'circle') {
-                    const svg = $('diagram-svg-overlay');
-                    if (svg && img) {
-                        const iw = img.offsetWidth || 800;
-                        const ih = img.offsetHeight || 600;
-                        const acx = cx * iw, acy = cy * ih;
-                        const arx = (r.w_pct / 2) * iw + 12;
-                        const ary = (r.h_pct / 2) * ih + 12;
-                        const ell = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-                        ell.setAttribute('cx', acx); ell.setAttribute('cy', acy);
-                        ell.setAttribute('rx', arx); ell.setAttribute('ry', ary);
-                        ell.setAttribute('fill', 'none');
-                        ell.setAttribute('stroke', d.annotation_color || '#00E5FF');
-                        ell.setAttribute('stroke-width', '3');
-                        ell.setAttribute('filter', 'url(#glow)');
-                        const len = 2 * Math.PI * Math.sqrt((arx*arx + ary*ary)/2);
-                        ell.style.strokeDasharray = len;
-                        ell.style.strokeDashoffset = len;
-                        ell.style.transition = 'stroke-dashoffset 0.6s ease-out';
-                        svg.appendChild(ell);
-                        requestAnimationFrame(() => { ell.style.strokeDashoffset = '0'; });
-                        setTimeout(() => { try{svg.removeChild(ell);}catch(e){} }, d.hold_ms || 2500);
-                    }
-                } else if (d.annotation_type === 'highlight_box') {
-                    let hBox = $('spatial-highlight');
-                    if (!hBox) {
-                        hBox = document.createElement('div');
-                        hBox.id = 'spatial-highlight';
-                        hBox.className = 'spatial-highlight-box';
-                        hBox.style.position = 'absolute'; hBox.style.pointerEvents = 'none';
-                        vp.appendChild(hBox);
-                    }
-                    if (img) {
-                        hBox.style.left = (r.x_pct * 100) + '%';
-                        hBox.style.top = (r.y_pct * 100) + '%';
-                        hBox.style.width = (r.w_pct * 100) + '%';
-                        hBox.style.height = (r.h_pct * 100) + '%';
-                    }
-                    if (G) G.fromTo(hBox, {opacity:0}, {opacity:1, duration:0.4});
-                    setTimeout(() => { if (G) G.to(hBox, {opacity:0, duration:0.3}); }, d.hold_ms || 2500);
-                }
-                // Floating label
-                if (d.region_label) {
-                    let popup = $('diagram-label-popup');
-                    if (!popup) {
-                        popup = document.createElement('div');
-                        popup.id = 'diagram-label-popup';
-                        popup.className = 'diagram-label-popup';
-                        vp.appendChild(popup);
-                    }
-                    popup.textContent = d.region_label;
-                    popup.style.left = (cx * 100) + '%';
-                    popup.style.top = Math.max(r.y_pct * 100 - 5, 2) + '%';
-                    popup.style.display = 'block';
-                    requestAnimationFrame(() => popup.classList.add('popup-visible'));
-                    setTimeout(() => { popup.classList.remove('popup-visible'); setTimeout(() => popup.style.display = 'none', 400); }, d.hold_ms || 2500);
-                }
-                // Auto zoom out
-                setTimeout(() => {
-                    if (G) G.to(vp, {scale: 1, x: 0, y: 0, duration: 0.7, ease: 'power2.inOut'});
-                }, d.hold_ms || 2500);
+        }
+
+        /* ── table_column_highlight: highlight table column ── */
+        if (t === 'table_column_highlight') {
+            if (d && window.TableAnim) {
+                TableAnim.focusColumn(d.col_index, d.color || '#FFD700');
             }
+        }
+
+        /* ── table_cell_spotlight: spotlight cell ── */
+        if (t === 'table_cell_spotlight') {
+            if (d && window.TableAnim) {
+                TableAnim.spotlightCell(d.row_index, d.col_index, d.color || '#44FF88');
+            }
+        }
+
+        /* ── diagram_zoom_in: zoom and move cursor ── */
+        if (t === 'diagram_zoom_in') {
+            if (d && d.region && window.DiagAnim) {
+                DiagAnim.zoomTo(d.region, d.zoom_scale || 2.2, 0.9);
+                DiagAnim.moveCursor(d.region);
+            }
+        }
+
+        /* ── diagram_zoom_out: reset camera ── */
+        if (t === 'diagram_zoom_out') {
+            if (window.DiagAnim) DiagAnim.zoomOut(0.85);
+        }
+
+        /* ── diagram_annotate_circle: draw glowing circle ── */
+        if (t === 'diagram_annotate_circle') {
+            if (d && d.region && window.DiagAnim) {
+                DiagAnim.drawCircle(d.region, d.annotation_color || '#00E5FF');
+            }
+        }
+
+        /* ── diagram_highlight_region: highlight region ── */
+        if (t === 'diagram_highlight_region') {
+            if (d && d.region && window.DiagAnim) {
+                DiagAnim.drawHighlight(d.region, d.annotation_color || '#FF4444');
+            }
+        }
+
+        /* ── diagram_flow_arrow: draw path arrow ── */
+        if (t === 'diagram_flow_arrow') {
+            if (d && d.from_region && d.to_region && window.DiagAnim) {
+                DiagAnim.drawArrow(d.from_region, d.to_region, d.label || '', d.annotation_color || '#FFD700');
+            }
+        }
+
+        /* ── diagram_cursor_move: track cursor ── */
+        if (t === 'diagram_cursor_move') {
+            if (d && d.region && window.DiagAnim) {
+                DiagAnim.moveCursor(d.region);
+            }
+        }
+
+        /* ── diagram_overview: reset and clear ── */
+        if (t === 'diagram_overview') {
+            if (window.DiagAnim) { DiagAnim.zoomOut(0.6); DiagAnim.clearAll(); }
         }
 
     }
