@@ -31,6 +31,19 @@
     /* ─── GSAP availability check ──────────────────────────── */
     const G = typeof gsap !== 'undefined' ? gsap : null;
 
+    /* ─── Avatar Default Position Detection ────────────────── */
+    let _avDefLeft = 28, _avDefBottom = 28, _avDefW = 115, _avDefH = 115;
+    (function() {
+        const av = document.getElementById('avatar');
+        if (av) {
+            const cs = window.getComputedStyle(av);
+            _avDefLeft   = parseFloat(cs.left)   || 28;
+            _avDefBottom = parseFloat(cs.bottom)  || 28;
+            _avDefW      = parseFloat(cs.width)   || 115;
+            _avDefH      = parseFloat(cs.height)  || 115;
+        }
+    })();
+
     /* ─── Visual Glow Helpers ──────────────────────────────── */
     function clearGlowProperties(el) {
         if (!el) return;
@@ -886,10 +899,10 @@
             if (avatar && G && !avHidden2) {
                 G.killTweensOf(avatar);
                 G.to(avatar, {
-                    left: 28,
-                    bottom: 28,
-                    width: 160,
-                    height: 160,
+                    left: _avDefLeft,
+                    bottom: _avDefBottom,
+                    width: _avDefW,
+                    height: _avDefH,
                     scale: 1,
                     duration: 1.0,
                     ease: 'power3.inOut',
@@ -898,10 +911,10 @@
                 if (avatarRing) {
                     G.killTweensOf(avatarRing);
                     G.to(avatarRing, {
-                        left: 19,
-                        bottom: 19,
-                        width: 178,
-                        height: 178,
+                        left: _avDefLeft - 9,
+                        bottom: _avDefBottom - 9,
+                        width: _avDefW + 18,
+                        height: _avDefH + 18,
                         opacity: 0.5,
                         duration: 1.0,
                         ease: 'power3.inOut'
@@ -976,9 +989,10 @@
             const idx = d.index;
             if (idx === undefined) return;
             qa('.bullet, .legend-card, .step-card').forEach((b, i) => {
-                if (i < idx) {
+                if (i !== idx) {
                     b.classList.remove('b-active');
-                    b.classList.add('b-done');
+                    if (i < idx) b.classList.add('b-done');
+                    else         b.classList.remove('b-done');
                     cleanupGlowsInContainer(b);
                     const numEl = b.querySelector('.bullet-num, .step-card-num');
                     const txtEl = b.querySelector('.bullet-text, .step-card-text');
@@ -1131,10 +1145,10 @@
                 // Start subtle Ken Burns on diagram after entrance
                 setTimeout(() => card.classList.add('diag-zoom'), 700);
             }
-            // Move avatar out of the way
+            // Move avatar out of the way (shrink slightly)
             const av = $('avatar');
             if (av && G) {
-                G.to(av, {left: 28, bottom: 28, width: 120, height: 120, duration: 0.6, ease: 'power2.inOut'});
+                G.to(av, {left: _avDefLeft, bottom: _avDefBottom, width: Math.min(_avDefW, 120), height: Math.min(_avDefH, 120), duration: 0.6, ease: 'power2.inOut'});
             }
         }
 
@@ -1895,7 +1909,7 @@
             // Return avatar to default corner position
             const av = $('avatar');
             if (av && G) {
-                G.to(av, {left: 28, bottom: 28, width: 160, height: 160, duration: 0.6, ease: 'power2.inOut'});
+                G.to(av, {left: _avDefLeft, bottom: _avDefBottom, width: _avDefW, height: _avDefH, duration: 0.6, ease: 'power2.inOut'});
             }
         }
 

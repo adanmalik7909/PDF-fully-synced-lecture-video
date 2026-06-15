@@ -74,11 +74,11 @@
         transition: transform 0.3s ease, opacity 0.3s ease;
     }
     
-    .step-card.active {
-        opacity: 1;
-        transform: scale(1.05);
-        border-left-color: var(--gold);
-        box-shadow: 0 0 20px rgba(212,168,83,0.35);
+    .step-card.b-active {
+        opacity: 1 !important;
+        transform: scale(1.05) !important;
+        border: 2.5px solid var(--gold) !important;
+        box-shadow: 0 8px 28px rgba(212,168,83,0.35), 0 0 0 4px rgba(212,168,83,0.10) !important;
     }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>

@@ -896,54 +896,16 @@ body.scene-ready { opacity: 1; }
 }
 
 /* ═══════════════════════════════════
-   V12.5 — ZOOM WORD ON SLIDE
+   V12.5 — LEFT-PANEL ZOOM WORD OVERRIDE
+   (base .zoom-word-inline is at L358 — dark navy on cream)
+   On the navy left panel, switch to gold so it's visible.
 ═══════════════════════════════════ */
-.zoom-word-inline {
-  display: inline-block;
-  transform-origin: center center;
+.left-panel .zoom-word-inline {
   color: #C9B99A;
-  font-weight: 600;
-  border-bottom: 1.5px solid rgba(201,185,154,0.4);
-  cursor: default;
-  transition: border-color 0.3s ease;
+  border-bottom-color: rgba(201,185,154,0.6);
 }
 
-/* ═══════════════════════════════════
-   V12.5 — HEADING UNDERLINE ANIM
-═══════════════════════════════════ */
-.heading-underline-anim {
-  text-decoration: underline;
-  text-decoration-color: #C9B99A;
-  text-underline-offset: 6px;
-  text-decoration-thickness: 3px;
-}
-
-/* ═══════════════════════════════════
-   V12.5 — ATTENTION HOOK BOX
-═══════════════════════════════════ */
-#attention-hook-box {
-  position: fixed;
-  z-index: 150;
-  display: none;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
-  border-radius: 14px;
-  background: rgba(26, 37, 53, 0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  color: #F5F3EE;
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
-  border: 1px solid rgba(201,185,154,0.2);
-  max-width: 380px;
-}
-.hook-top-right     { top: 60px; right: 60px; }
-.hook-bottom-center { bottom: 120px; left: 50%; transform: translateX(-50%); }
-.hook-floating      { top: 50%; right: 80px; transform: translateY(-50%); }
-.hook-icon { font-size: 22px; }
+/* V12.5 — Hook text line-height helper */
 .hook-text { line-height: 1.4; }
 
 /* ═══════════════════════════════════
