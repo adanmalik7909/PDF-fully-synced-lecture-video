@@ -4,6 +4,16 @@
 
 ---
 
+## 🎥 Demo & Output Preview
+
+Here is a live preview of the inputs and the generated talking-head lecture video. When visitors view your repository on GitHub, they will see the teacher's avatar and can play the generated video directly in their browser:
+
+| 📥 Sample Input Assets | 📤 Generated Lecture Output |
+| :--- | :--- |
+| **Teacher Avatar:**<br>![Teacher Avatar](backend/static/demo_assets/teacher_avatar.png)<br><br>**Sample PDF:**<br>[📄 Download test_lecture.pdf](backend/static/demo_assets/test_lecture.pdf) | **Talking-Head Video:**<br><video src="backend/static/demo_assets/lecture_video.mp4" width="450" controls></video><br><br>*(Plays directly on GitHub)* |
+
+---
+
 ## 📸 Overview & Key Features
 `SmartStudyInstructor` is a comprehensive educational suite designed to automate lecture preparation, deliver highly interactive learning material, and monitor student engagement.
 

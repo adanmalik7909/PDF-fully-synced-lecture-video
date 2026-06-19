@@ -55,3 +55,8 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
+# Demo assets whitelist
+!backend/static/demo_assets/
+!backend/static/demo_assets/**/*
+
+
