@@ -1,11 +1,11 @@
-# SmartStudyInstructor — Unified AI-Powered Tutoring & Lecture Generator
+# PDF-to-fully-synced-lecture-video — Unified AI-Powered Tutoring & Lecture Generator
 
 > An advanced final-year project (FYP) featuring role-based classroom management, a PDF-to-lecture RAG pipeline, real-time Playwright-rendered lecture videos, and remote GPU-accelerated talking-head avatars (Wav2Lip / OmniAvatar).
 
 ---
 
 ## 📸 Overview & Key Features
-`SmartStudyInstructor` is a comprehensive educational suite designed to automate lecture preparation, deliver highly interactive learning material, and monitor student engagement.
+`PDF-to-fully-synced-lecture-video` is a comprehensive educational suite designed to automate lecture preparation, deliver highly interactive learning material, and monitor student engagement.
 
 *   **Intelligent Pedagogical Engine:** Generates highly structured **Scene DNA** scripts (Intro, Topic Concept, Bullet Points, Diagram Zoom, Worked Example, Interactive Quiz, Outro) from uploaded PDF textbooks using Gemini 2.0 Flash / Groq LLaMA 3.
 *   **Audio-Visual Synced Lecture Player:** Headless Chromium captures virtual-time HTML/JS animations (using GSAP and Canvas) and composites them with TTS audio using an exact-duration FFmpeg rendering pipeline.
@@ -75,7 +75,7 @@
 ## 📂 Project Structure
 
 ```
-SmartStudyInstructor/
+PDF-to-fully-synced-lecture-video/
 ├── backend/                  # FastAPI Web Backend
 │   ├── app/
 │   │   ├── auth/            # JWT authentication & user accounts
